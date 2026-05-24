@@ -1,0 +1,1 @@
+# KMN26-reszlegek
