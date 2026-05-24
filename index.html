@@ -200,7 +200,7 @@ function load(){
       var t=new TextDecoder('utf-8').decode(b);
       ROWS=mapRows(parseCSV(t));
       document.getElementById('info').textContent='Frissítve: '+new Date().toLocaleTimeString('hu-HU')+' ('+ROWS.length+' sor)';
-      buildSelects();buildColPanel();render();
+      buildLinkCols();buildSelects();buildColPanel();render();
     })
     .catch(function(e){document.getElementById('info').textContent='Hiba: '+e.message;});
 }
