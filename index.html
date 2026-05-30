@@ -142,7 +142,11 @@ var VIEW_SK=null,VIEW_SD=1;
 var VIEWS={
   arculat:{name:'🎨 Arculat',cols:[0,1,2,3,4,5,6,7,9,10,11,12,13,14,15]},
   szallas:{name:'🏨 Szállás & Étkezés',cols:[0,1,2,3,4,5,23,24,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44]},
-  technika:{name:'🔧 Technika',cols:[0,1,2,3,4,5,6,7,16,17,18,19,20,21,22]}
+  technika:{name:'🔧 Technika',cols:[0,1,2,3,4,5,6,7,16,17,18,19,20,21,22]},
+  teljes:{name:'📋 Teljes',cols:[0,1,2,3,4]},
+  culina:{name:'🍽️ Culina',cols:[0,1,2,3,4]},
+  banffy:{name:'🏛️ Bánffy',cols:[0,1,2,3,4]},
+  farkas:{name:'🎭 Farkas utca',cols:[0,1,2,3,4]}
 };
 var DEFAULT_COLS={
   all:[0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,112,113,114,115,116,117,118,119,120,121],
@@ -171,7 +175,9 @@ function loadSavedCols(){
     try{var s=localStorage.getItem('kmn26r_cols_'+tab);TAB_COLS[tab]=s?JSON.parse(s):DEFAULT_COLS[tab].slice();}
     catch(e){TAB_COLS[tab]=DEFAULT_COLS[tab].slice();}
   });
-  Object.keys(VIEWS).forEach(function(vk){VIEW_COLS[vk]=VIEWS[vk].cols.slice();});
+  Object.keys(VIEWS).forEach(function(vk){
+    VIEW_COLS[vk]=VIEWS[vk].cols.slice();
+  });
 }
 function saveCols(tab){
   try{
@@ -257,8 +263,8 @@ function buildUzenet(r){
     if(isVarom(r[ci]))hianyzok.push('- '+lbl);
   });
   if(hianyzok.length===0)return null;
-  var nev=(r[9]||'').split('\n')[0].trim();
-  if(!nev||nev.toLowerCase()==='alcím')nev=(r[10]||'').split('\n')[0].trim();
+  var nev=(r[112]||'').split('\n')[0].trim();
+  if(!nev||nev.toLowerCase()==='alcím')nev=(r[113]||'').split('\n')[0].trim();
   if(!nev||nev.toLowerCase()==='alcím')nev='';
   var s='Kedves '+(nev||r[0])+'!\n\n';
   s+='Kérem küldje el az alábbiakat a Kolozsvári Magyar Napok szervezéshez ('+r[1]+', '+r[3]+'):\n\n';
