@@ -212,8 +212,11 @@ function loadSettingsFromSheets(callback){
         if(!key||!val)continue;
         try{
           var parsed=JSON.parse(val);
-          if(Array.isArray(parsed)&&VIEWS[key]!==undefined){
-            VIEW_COLS[key]=parsed;
+          if(key.indexOf('view_')===0){
+            var vk=key.replace('view_','');
+            if(VIEWS[vk]!==undefined&&Array.isArray(parsed)){
+              VIEW_COLS[vk]=parsed;
+            }
           }
         }catch(e){}
       }
@@ -260,8 +263,7 @@ function loadSavedCols(){
     catch(e){TAB_COLS[tab]=DEFAULT_COLS[tab].slice();}
   });
   Object.keys(VIEWS).forEach(function(vk){
-    try{var s=localStorage.getItem('kmn26r_view_'+vk);VIEW_COLS[vk]=s?JSON.parse(s):VIEWS[vk].cols.slice();}
-    catch(e){VIEW_COLS[vk]=VIEWS[vk].cols.slice();}
+    VIEW_COLS[vk]=VIEWS[vk].cols.slice();
   });
 }
 function saveCols(tab){
@@ -270,9 +272,6 @@ function saveCols(tab){
     var n=document.getElementById('saveNote');
     if(n){n.textContent='✓ Mentve';setTimeout(function(){n.textContent='';},2000);}
   }catch(e){}
-}
-function saveViewCols(vk){
-  try{localStorage.setItem('kmn26r_view_'+vk,JSON.stringify(VIEW_COLS[vk]));}catch(e){}
 }
 function parseCSV(text){
   var rows=[],row=[],cur='',q=false;
