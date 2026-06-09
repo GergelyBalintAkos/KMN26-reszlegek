@@ -687,6 +687,8 @@ function checkUrlView(){
     document.getElementById('viewMode').style.display='block';
     CURRENT_VIEW=vk;
     document.getElementById('viewTitle').textContent=VIEWS[vk].name;
+    document.getElementById('viewColToggleBtn').style.display='none';
+    document.getElementById('colToggleBtn').style.display='none';
     document.getElementById('viewLinkBox').textContent=window.location.href;
     return;
   }
