@@ -144,10 +144,8 @@ tr.ures td{color:#bbb;font-style:italic}
   <span class="dot"></span>
   <span id="viewInfo" style="font-size:12px;color:#666"></span>
   <div class="view-link-box" id="viewLinkBox"></div>
-  <button class="col-toggle-btn" id="viewColToggleBtn" onclick="toggleViewColPanel()">⚙ Oszlopok</button>
   <button class="view-print-btn" onclick="printView()">🖨️ PDF</button>
 </div>
-<div class="col-panel" id="viewColPanel"></div>
 <div class="filters">
   <input type="text" id="vq" placeholder="Keresés..." oninput="renderView()">
   <select id="vfhely" onchange="renderView()"><option value="">Minden helyszín</option></select>
@@ -171,6 +169,7 @@ tr.ures td{color:#bbb;font-style:italic}
 <script>
 var ROWS=[],TAB='all',SK=null,SD=1;
 var SID='1nDYwU-BjpIIjvp1bctiVQsD4ZnozLLazC6KsjcBGU6I';
+var MAIN_SID='1TU1LasWxZE2wuFUsAXq9hEzyAIym3BDIUnVTmwG18OQ';
 var ALL_HEADERS=[];
 var LAST_UPDATE='';
 var LINK_COLS={};
@@ -201,6 +200,27 @@ var DEFAULT_COLS={
 var TAB_COLS={};
 var VIEW_COLS={};
 function isX(v){return v&&v.trim().toLowerCase()==='x';}
+function loadSettingsFromSheets(callback){
+  fetch('https://docs.google.com/spreadsheets/d/'+MAIN_SID+'/gviz/tq?tqx=out:csv&sheet=settings&_='+Date.now())
+    .then(function(r){return r.text();})
+    .then(function(t){
+      if(!t||t.trim()===''||t.indexOf('Error')===0){callback();return;}
+      var rows=parseCSV(t);
+      for(var i=0;i<rows.length;i++){
+        var key=rows[i][0]?rows[i][0].replace(/^"|"$/g,'').trim():'';
+        var val=rows[i][1]?rows[i][1].replace(/^"|"$/g,'').trim():'';
+        if(!key||!val)continue;
+        try{
+          var parsed=JSON.parse(val);
+          if(Array.isArray(parsed)&&VIEWS[key]!==undefined){
+            VIEW_COLS[key]=parsed;
+          }
+        }catch(e){}
+      }
+      callback();
+    })
+    .catch(function(){callback();});
+}
 function makeStickyScroll(wrapId){
   var wrap=document.getElementById(wrapId);
   if(!wrap)return;
@@ -329,28 +349,30 @@ function renderCellValue(v){
 function load(){
   var infoEl=SOLO_MODE?document.getElementById('soloInfo'):document.getElementById('info');
   if(infoEl)infoEl.textContent='Betöltés...';
-  fetch('https://docs.google.com/spreadsheets/d/'+SID+'/export?format=csv&sheet=Forr%C3%A1s&_='+Date.now())
-    .then(function(r){return r.arrayBuffer();})
-    .then(function(b){
-      var t=new TextDecoder('utf-8').decode(b);
-      ROWS=mapRows(parseCSV(t));
-      LAST_UPDATE=new Date().toLocaleString('hu-HU');
-      var msg='Frissítve: '+LAST_UPDATE+' ('+ROWS.length+' sor)';
-      if(SOLO_MODE){
-        document.getElementById('soloInfo').textContent=msg;
-        buildLinkCols();buildSoloSelects();renderSolo();
-      }else if(CURRENT_VIEW){
-        document.getElementById('info')&&(document.getElementById('info').textContent=msg);
-        buildLinkCols();buildSelects();buildColPanel();renderView();buildViewSelects();
-      }else{
-        document.getElementById('info').textContent=msg;
-        buildLinkCols();buildSelects();buildColPanel();render();
-      }
-    })
-    .catch(function(e){
-      var el=SOLO_MODE?document.getElementById('soloInfo'):document.getElementById('info');
-      if(el)el.textContent='Hiba: '+e.message;
-    });
+  loadSettingsFromSheets(function(){
+    fetch('https://docs.google.com/spreadsheets/d/'+SID+'/export?format=csv&sheet=Forr%C3%A1s&_='+Date.now())
+      .then(function(r){return r.arrayBuffer();})
+      .then(function(b){
+        var t=new TextDecoder('utf-8').decode(b);
+        ROWS=mapRows(parseCSV(t));
+        LAST_UPDATE=new Date().toLocaleString('hu-HU');
+        var msg='Frissítve: '+LAST_UPDATE+' ('+ROWS.length+' sor)';
+        if(SOLO_MODE){
+          document.getElementById('soloInfo').textContent=msg;
+          buildLinkCols();buildSoloSelects();renderSolo();
+        }else if(CURRENT_VIEW){
+          document.getElementById('info')&&(document.getElementById('info').textContent=msg);
+          buildLinkCols();buildSelects();renderView();buildViewSelects();
+        }else{
+          document.getElementById('info').textContent=msg;
+          buildLinkCols();buildSelects();buildColPanel();render();
+        }
+      })
+      .catch(function(e){
+        var el=SOLO_MODE?document.getElementById('soloInfo'):document.getElementById('info');
+        if(el)el.textContent='Hiba: '+e.message;
+      });
+  });
 }
 function buildSelects(){
   var sh=document.getElementById('fhely'),sd=document.getElementById('fdat');
@@ -389,16 +411,6 @@ function buildColPanel(){
   });
   document.getElementById('colPanel').innerHTML=html;
 }
-function buildViewColPanel(){
-  if(!CURRENT_VIEW)return;
-  var cols=VIEW_COLS[CURRENT_VIEW]||[],html='';
-  ALL_HEADERS.forEach(function(h,i){
-    if(!h)return;
-    var chk=cols.indexOf(i)>=0?'checked':'';
-    html+='<label class="col-check"><input type="checkbox" '+chk+' onchange="toggleViewCol('+i+',this.checked)"> '+h+'</label>';
-  });
-  document.getElementById('viewColPanel').innerHTML=html;
-}
 function toggleCol(i,checked){
   if(!TAB_COLS[TAB])TAB_COLS[TAB]=[];
   if(checked&&TAB_COLS[TAB].indexOf(i)<0)TAB_COLS[TAB].push(i);
@@ -406,20 +418,9 @@ function toggleCol(i,checked){
   TAB_COLS[TAB].sort(function(a,b){return a-b;});
   saveCols(TAB);render();
 }
-function toggleViewCol(i,checked){
-  if(!VIEW_COLS[CURRENT_VIEW])VIEW_COLS[CURRENT_VIEW]=[];
-  if(checked&&VIEW_COLS[CURRENT_VIEW].indexOf(i)<0)VIEW_COLS[CURRENT_VIEW].push(i);
-  if(!checked)VIEW_COLS[CURRENT_VIEW]=VIEW_COLS[CURRENT_VIEW].filter(function(c){return c!==i;});
-  VIEW_COLS[CURRENT_VIEW].sort(function(a,b){return a-b;});
-  saveViewCols(CURRENT_VIEW);renderView();
-}
 function toggleColPanel(){
   var p=document.getElementById('colPanel'),b=document.getElementById('colToggleBtn');
   buildColPanel();p.classList.toggle('open');b.classList.toggle('open');
-}
-function toggleViewColPanel(){
-  var p=document.getElementById('viewColPanel'),b=document.getElementById('viewColToggleBtn');
-  buildViewColPanel();p.classList.toggle('open');b.classList.toggle('open');
 }
 function hbadge(h){
   if(!h)return'';
@@ -687,9 +688,8 @@ function checkUrlView(){
     document.getElementById('viewMode').style.display='block';
     CURRENT_VIEW=vk;
     document.getElementById('viewTitle').textContent=VIEWS[vk].name;
-    document.getElementById('viewColToggleBtn').style.display='none';
-    document.getElementById('colToggleBtn').style.display='none';
     document.getElementById('viewLinkBox').textContent=window.location.href;
+    document.getElementById('colToggleBtn').style.display='none';
     return;
   }
   var urlTab=params.get('tab');
