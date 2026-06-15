@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>KMN26 — Arculat</title>
+<style>
+body{font-family:sans-serif;padding:20px;background:#f9f9f7;color:#222}
+.bar{background:#eee;padding:10px 15px;border-radius:8px;margin-bottom:15px;font-size:13px;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.dot{width:8px;height:8px;border-radius:50%;background:green;display:inline-block}
+button{padding:6px 12px;border:1px solid #ccc;border-radius:6px;background:#fff;cursor:pointer;font-size:13px}
+.filters{display:flex;gap:8px;margin-bottom:8px;flex-wrap:wrap;align-items:center}
+input,select{padding:7px 10px;border:1px solid #ddd;border-radius:6px;font-size:13px}
+input{min-width:180px}
+.wrap{overflow-x:auto;background:#fff;border:1px solid #eee;border-radius:8px}
+.wrap::-webkit-scrollbar{height:8px}
+.wrap::-webkit-scrollbar-track{background:#f0f0ee;border-radius:4px}
+.wrap::-webkit-scrollbar-thumb{background:#bbb;border-radius:4px}
+.wrap::-webkit-scrollbar-thumb:hover{background:#888}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{padding:6px 8px;background:#f5f5f3;text-align:left;font-size:11px;color:#666;white-space:nowrap;max-width:100px;overflow:hidden;text-overflow:ellipsis}
+td{padding:6px 8px;border-top:1px solid #f0f0f0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:150px}
+tr:hover td{background:#fafafa;cursor:pointer}
+.badge{display:inline-block;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:500}
+.bf{background:#deeeff;color:#0a4080}.bb{background:#eeeaff;color:#3a2090}.bfk{background:#d8f5e8;color:#0a5030}.br{background:#fff0d8;color:#704000}
+.mv-varom{background:#ffeaea;border-radius:4px;padding:2px 7px;color:#c00;display:inline}
+.mv-tba{background:#fff8e8;border-radius:4px;padding:2px 7px;color:#a06000;display:inline}
+.link-btn{display:inline-block;padding:3px 10px;background:#e8f0fe;color:#0a4080;border-radius:5px;font-size:11px;text-decoration:none;margin-top:4px}
+.mv-table{width:100%;border-collapse:collapse;font-size:12px;margin-top:4px}
+.mv-table td{padding:4px 8px;border:1px solid #eee;vertical-align:top;white-space:normal;max-width:none}
+.empty{text-align:center;padding:40px;color:#aaa}
+.modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:99;justify-content:center;align-items:flex-start;padding-top:40px}
+.modal.open{display:flex}
+.mbox{background:#fff;border-radius:12px;width:90%;max-width:580px;max-height:85vh;overflow-y:auto;padding:24px;position:relative}
+.mclose{float:right;background:none;border:none;font-size:22px;cursor:pointer;color:#bbb}
+.modal-brand{font-size:11px;color:#bbb;margin-bottom:3px}
+.modal-sub{font-size:14px;color:#444;margin-bottom:20px;font-weight:500}
+.mfield{padding:11px 0;border-bottom:1px solid #e8e8e8}
+.mfield:last-child{border-bottom:none}
+.mfield .ml{font-size:11px;color:#777;margin-bottom:4px;font-weight:600}
+.mfield .mv{font-size:13px;color:#222;line-height:1.6;white-space:pre-wrap;word-break:break-word}
+.msection{margin:18px 0 6px 0;padding:9px 14px;background:#efefed;border-radius:6px;font-size:11px;font-weight:700;color:#666;text-transform:uppercase;letter-spacing:0.8px;border-left:3px solid #ccc}
+.header-bar{background:#1a1a2e;color:#fff;border-radius:8px;padding:12px 16px;margin-bottom:15px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px}
+.header-title{font-size:17px;font-weight:600}
+.header-sub{font-size:12px;color:#aaa}
+</style>
+</head>
+<body>
+<div class="header-bar">
+  <div>
+    <div class="header-title">🎨 Arculat</div>
+    <div class="header-sub">Kolozsvári Magyar Napok 2026</div>
+  </div>
+  <div style="display:flex;align-items:center;gap:10px">
+    <span class="dot"></span>
+    <span id="info" style="font-size:12px;color:#aaa">Betöltés...</span>
+    <button onclick="load()" style="background:#444;border-color:#555;color:#fff">↻</button>
+  </div>
+</div>
+<div class="filters">
+  <input type="text" id="q" placeholder="Keresés..." oninput="render()">
+  <select id="fhely" onchange="render()"><option value="">Minden helyszín</option></select>
+  <select id="fdat" onchange="render()"><option value="">Minden dátum</option></select>
+</div>
+<div class="wrap" id="mainWrap">
+  <table><thead id="thead"></thead><tbody id="tbody"></tbody></table>
+</div>
+<div style="font-size:12px;color:#888;padding:8px 0" id="count"></div>
+<div class="modal" id="modal" onclick="if(event.target===this)closeModal()">
+  <div class="mbox">
+    <button class="mclose" onclick="closeModal()">×</button>
+    <div class="modal-brand">Kolozsvári Magyar Napok 2026 — Arculat</div>
+    <div class="modal-sub" id="msub"></div>
+    <div id="mbody"></div>
+  </div>
+</div>
+<script>
+var ROWS=[];
+var ALL_HEADERS=[];
+var LAST_UPDATE='';
+var LINK_COLS={};
+var CURRENT_ROW_IDX=-1;
+var SK=null,SD=1;
+var VIEW_COLS=[];
+var MAIN_SID='1TU1LasWxZE2wuFUsAXq9hEzyAIym3BDIUnVTmwG18OQ';
+var RESZL_SID='1nDYwU-BjpIIjvp1bctiVQsD4ZnozLLazC6KsjcBGU6I';
+var VIEW_KEY='view_arculat';
+
+function isX(v){return v&&v.trim().toLowerCase()==='x';}
+function isTba(v){if(!v||v.trim()==='')return false;return v.trim().toLowerCase()==='tba';}
+function isTbc(v){if(!v||v.trim()==='')return false;return v.trim().toLowerCase()==='tbc';}
+function isVarom(v){
+  if(!v||v.trim()==='')return false;
+  var l=v.toLowerCase();
+  if(isTba(v)||isTbc(v))return true;
+  return l.indexOf('varom')>=0||l.indexOf('várom')>=0||l.indexOf('varjuk')>=0||l.indexOf('várjuk')>=0||l.indexOf('igerte')>=0||l.indexOf('ígérte')>=0;
+}
+function getMvClass(v){
+  if(!v||v.trim()==='')return '';
+  if(isTbc(v))return 'mv-varom';
+  if(isTba(v))return 'mv-tba';
+  if(isVarom(v))return 'mv-varom';
+  return '';
+}
+function isLink(v){return v&&/^https?:\/\//.test(v.trim());}
+function highlightTba(v){
+  if(!v)return v;
+  return v.replace(/(TBC|TBA)/gi,function(m){
+    return m.toUpperCase()==='TBC'?'<span class="mv-varom">'+m+'</span>':'<span class="mv-tba">'+m+'</span>';
+  });
+}
+function hbadge(h){
+  if(!h)return'';
+  var l=h.toLowerCase();
+  var cls=l.indexOf('főtér')>=0?'bf':l.indexOf('bánffy')>=0?'bb':l.indexOf('farkas')>=0?'bfk':l.indexOf('redut')>=0?'br':'';
+  return cls?'<span class="badge '+cls+'">'+h+'</span>':h;
+}
+function renderCellValue(v){
+  if(!v)return'—';
+  if(v.indexOf('|')<0){
+    if(isLink(v))return'<a href="'+v+'" target="_blank" class="link-btn">🔗 Megnyitás</a>';
+    return highlightTba(v);
+  }
+  var lines=v.trim().split('\n');
+  var html='<table class="mv-table">';
+  lines.forEach(function(line){
+    if(!line.trim())return;
+    if(line.indexOf('|')>=0){
+      var cols=line.split('|');
+      html+='<tr>'+cols.map(function(c){return'<td>'+highlightTba(c.trim())+'</td>';}).join('')+'</tr>';
+    }else{
+      html+='<tr><td colspan="10" style="font-weight:500;background:#f9f9f7;padding:6px 8px">'+highlightTba(line.trim())+'</td></tr>';
+    }
+  });
+  html+='</table>';
+  return html;
+}
+function parseCSV(text){
+  var rows=[],row=[],cur='',q=false;
+  for(var i=0;i<text.length;i++){
+    var c=text[i];
+    if(c==='"'){if(q&&text[i+1]==='"'){cur+='"';i++;}else q=!q;}
+    else if(c===','&&!q){row.push(cur);cur='';}
+    else if((c==='\n'||c==='\r')&&!q){if(c==='\r'&&text[i+1]==='\n')i++;row.push(cur);rows.push(row);row=[];cur='';}
+    else cur+=c;
+  }
+  if(cur||row.length){row.push(cur);rows.push(row);}
+  return rows;
+}
+function mapRows(grid){
+  if(grid.length<2)return[];
+  ALL_HEADERS=grid[0].map(function(h){return h.replace(/\n/g,' ').trim();});
+  var res=[];
+  for(var r=1;r<grid.length;r++){
+    var row=grid[r],muv=row[0]||'',hely=row[5]||'',dat=row[3]||'';
+    if(!muv&&!hely&&!dat)continue;
+    var obj={ures:!muv};
+    for(var i=0;i<ALL_HEADERS.length;i++)obj[i]=row[i]||'';
+    res.push(obj);
+  }
+  return res;
+}
+function buildLinkCols(){
+  LINK_COLS={};
+  ALL_HEADERS.forEach(function(h,i){
+    if(!h)return;
+    if(h.toLowerCase().indexOf('link')>=0){
+      for(var j=i-1;j>=0;j--){
+        if(ALL_HEADERS[j]&&ALL_HEADERS[j].toLowerCase().indexOf('link')<0){LINK_COLS[j]=i;break;}
+      }
+    }
+  });
+}
+function makeStickyScroll(wrapId){
+  var wrap=document.getElementById(wrapId);
+  if(!wrap)return;
+  var old=document.getElementById(wrapId+'_mirror');
+  if(old)old.parentNode.removeChild(old);
+  var mirror=document.createElement('div');
+  mirror.id=wrapId+'_mirror';
+  mirror.style.cssText='overflow-x:auto;overflow-y:hidden;height:10px;margin-bottom:2px';
+  var inner=document.createElement('div');
+  inner.style.cssText='height:1px';
+  inner.style.width=wrap.scrollWidth+'px';
+  mirror.appendChild(inner);
+  wrap.parentNode.insertBefore(mirror,wrap);
+  mirror.addEventListener('scroll',function(){wrap.scrollLeft=mirror.scrollLeft;});
+  wrap.addEventListener('scroll',function(){mirror.scrollLeft=wrap.scrollLeft;});
+  setTimeout(function(){inner.style.width=wrap.scrollWidth+'px';},500);
+}
+function loadSettings(callback){
+  fetch('https://docs.google.com/spreadsheets/d/'+MAIN_SID+'/gviz/tq?tqx=out:csv&sheet=settings&_='+Date.now())
+    .then(function(r){return r.text();})
+    .then(function(t){
+      if(!t||t.trim()===''||t.indexOf('Error')===0){callback();return;}
+      var rows=parseCSV(t);
+      var seen={};
+      for(var i=rows.length-1;i>=0;i--){
+        var key=rows[i][0]?rows[i][0].replace(/^"|"$/g,'').trim():'';
+        var val=rows[i][1]?rows[i][1].replace(/^"|"$/g,'').trim():'';
+        if(!key||!val||seen[key])continue;
+        seen[key]=true;
+        if(key===VIEW_KEY){
+          try{var parsed=JSON.parse(val);if(Array.isArray(parsed))VIEW_COLS=parsed;}catch(e){}
+        }
+      }
+      callback();
+    })
+    .catch(function(){callback();});
+}
+function load(){
+  document.getElementById('info').textContent='Betöltés...';
+  loadSettings(function(){
+    fetch('https://docs.google.com/spreadsheets/d/'+RESZL_SID+'/export?format=csv&sheet=Forr%C3%A1s&_='+Date.now())
+      .then(function(r){return r.arrayBuffer();})
+      .then(function(b){
+        var t=new TextDecoder('utf-8').decode(b);
+        ROWS=mapRows(parseCSV(t));
+        LAST_UPDATE=new Date().toLocaleString('hu-HU');
+        document.getElementById('info').textContent='Frissítve: '+LAST_UPDATE+' ('+ROWS.length+' sor)';
+        buildLinkCols();
+        buildSelects();
+        render();
+      })
+      .catch(function(e){document.getElementById('info').textContent='Hiba: '+e.message;});
+  });
+}
+function buildSelects(){
+  var sh=document.getElementById('fhely'),sd=document.getElementById('fdat');
+  sh.innerHTML='<option value="">Minden helyszín</option>';
+  sd.innerHTML='<option value="">Minden dátum</option>';
+  var helyek={},datumok={};
+  ROWS.forEach(function(r){if(r[5])helyek[r[5]]=1;if(r[3])datumok[r[3]]=1;});
+  Object.keys(helyek).sort().forEach(function(v){sh.innerHTML+='<option>'+v+'</option>';});
+  Object.keys(datumok).sort().forEach(function(v){sd.innerHTML+='<option>'+v+'</option>';});
+}
+function getFiltered(){
+  var q=(document.getElementById('q').value||'').toLowerCase();
+  var fh=document.getElementById('fhely').value;
+  var fd=document.getElementById('fdat').value;
+  return ROWS.filter(function(r){
+    if(r.ures)return false;
+    if(q){var all='';for(var i=0;i<ALL_HEADERS.length;i++)all+=r[i]+' ';if(all.toLowerCase().indexOf(q)<0)return false;}
+    if(fh&&r[5]!==fh)return false;
+    if(fd&&r[3]!==fd)return false;
+    return true;
+  });
+}
+function render(){
+  var rows=getFiltered();
+  if(SK!==null)rows.sort(function(a,b){return String(a[SK]||'').localeCompare(String(b[SK]||''),'hu')*SD;});
+  var cols=VIEW_COLS.length>0?VIEW_COLS:[0,3,4,5,6];
+  var linkColVals=Object.values(LINK_COLS);
+  var visCols=cols.filter(function(c){return linkColVals.indexOf(c)<0;});
+  document.getElementById('thead').innerHTML='<tr>'+visCols.map(function(i){
+    return'<th onclick="sortBy('+i+')" title="'+(ALL_HEADERS[i]||'')+'">'+(ALL_HEADERS[i]||'')+'</th>';
+  }).join('')+'</tr>';
+  if(!rows.length){document.getElementById('tbody').innerHTML='<tr><td colspan="'+visCols.length+'"><div class="empty">Nincs találat.</div></td></tr>';return;}
+  document.getElementById('tbody').innerHTML=rows.map(function(r){
+    var ri=ROWS.indexOf(r);
+    return'<tr onclick="openModal('+ri+')">'
+      +visCols.map(function(ci){
+        var raw=r[ci]||'';
+        var v=isX(raw)?'':raw;
+        if(ci===5)v=hbadge(v);
+        var linkCol=LINK_COLS[ci];
+        if(linkCol!==undefined&&r[linkCol])v=v+' <a href="'+r[linkCol]+'" target="_blank" onclick="event.stopPropagation()" style="color:#0a4080;font-size:11px">🔗</a>';
+        return'<td title="'+raw.replace(/"/g,'&quot;')+'">'+v+'</td>';
+      }).join('')+'</tr>';
+  }).join('');
+  document.getElementById('count').textContent=rows.length+' sor';
+  setTimeout(function(){makeStickyScroll('mainWrap');},100);
+}
+function sortBy(k){if(SK===k)SD*=-1;else{SK=k;SD=1;}render();}
+function openModal(i){
+  CURRENT_ROW_IDX=i;
+  var r=ROWS[i];
+  document.getElementById('msub').textContent=(r[3]||'')+(r[4]?' · '+r[4]:'')+(r[6]?' · '+r[6]:'');
+  var h='';
+  var cols=VIEW_COLS.length>0?VIEW_COLS:[0,3,4,5,6];
+  cols.forEach(function(ci){
+    var lbl=ALL_HEADERS[ci]||'';
+    if(!lbl)return;
+    var v=r[ci]||'';
+    if(isX(v))return;
+    if(v.trim().toLowerCase()==='alcím')return;
+    if(lbl.indexOf('##')===0){h+='<div class="msection">'+lbl.replace(/^##\s*/,'')+'</div>';return;}
+    var vhtml=renderCellValue(v);
+    var mvCls=getMvClass(v);
+    var bold=ci===0?'font-weight:600;font-size:14px;':'';
+    var valHtml=mvCls?'<span class="'+mvCls+'">'+vhtml+'</span>':vhtml;
+    h+='<div class="mfield"><div class="ml">'+lbl+'</div><div class="mv" style="'+bold+'">'+valHtml+'</div></div>';
+  });
+  h+='<div style="font-size:10px;color:#ddd;margin-top:16px;padding-top:8px;border-top:1px solid #f0f0f0">Frissítés: '+LAST_UPDATE+'</div>';
+  document.getElementById('mbody').innerHTML=h;
+  document.getElementById('modal').classList.add('open');
+}
+function closeModal(){document.getElementById('modal').classList.remove('open');}
+load();
+setInterval(load,60000);
+</script>
+</body>
+</html>
