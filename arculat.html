@@ -264,7 +264,7 @@ function render(){
         var v=isX(raw)?'':raw;
         if(ci===5)v=hbadge(v);
         var linkCol=LINK_COLS[ci];
-        if(linkCol!==undefined&&r[linkCol])v=v+' <a href="'+r[linkCol]+'" target="_blank" onclick="event.stopPropagation()" style="color:#0a4080;font-size:11px">🔗</a>';
+        if(linkCol!==undefined&&r[linkCol]&&!isX(r[linkCol]))v=v+' <a href="'+r[linkCol]+'" target="_blank" onclick="event.stopPropagation()" style="color:#0a4080;font-size:11px">🔗</a>';
         return'<td title="'+raw.replace(/"/g,'&quot;')+'">'+v+'</td>';
       }).join('')+'</tr>';
   }).join('');
